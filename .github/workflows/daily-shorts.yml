@@ -1,0 +1,37 @@
+name: Bengali Shorts Factory
+on:
+  workflow_dispatch:
+    inputs:
+      topic_index:
+        description: "Optional topic number (0, 1, 2)"
+        required: false
+        type: string
+  schedule:
+    - cron: '0 13 * * *'
+permissions:
+  contents: read
+jobs:
+  render:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Install rendering dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y ffmpeg fonts-noto-core
+          python -m pip install -r requirements.txt
+      - name: Generate video
+        env:
+          TOPIC_INDEX: ${{ inputs.topic_index }}
+        run: |
+          if [ -z "$TOPIC_INDEX" ]; then unset TOPIC_INDEX; fi
+          python -m src.main
+      - uses: actions/upload-artifact@v4
+        with:
+          name: nishat-tech-short
+          path: output/
+          retention-days: 3
