@@ -1,37 +1,67 @@
 name: Bengali Shorts Factory
 on:
+  push:
+    branches: [main]
+    paths:
+      - 'src/**'
+      - 'data/**'
+      - 'requirements.txt'
+      - '.github/workflows/daily-shorts.yml'
   workflow_dispatch:
     inputs:
-      topic_index:
-        description: "Optional topic number (0, 1, 2)"
-        required: false
-        type: string
+      render_only:
+        description: Generate an artifact without uploading
+        type: boolean
+        default: false
   schedule:
     - cron: '0 13 * * *'
+concurrency:
+  group: nishat-tech-factory
+  cancel-in-progress: false
 permissions:
-  contents: read
+  contents: write
 jobs:
-  render:
-    runs-on: ubuntu-latest
-    timeout-minutes: 25
+  factory:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 35
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
         with:
           python-version: '3.11'
-      - name: Install rendering dependencies
+          cache: pip
+      - name: Install free rendering and voice dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y ffmpeg fonts-noto-core
+          sudo apt-get install -y ffmpeg fonts-noto-core espeak-ng
           python -m pip install -r requirements.txt
-      - name: Generate video
+      - name: Generate and upload privately
         env:
-          TOPIC_INDEX: ${{ inputs.topic_index }}
+          GH_STATE_TOKEN: ${{ github.token }}
+          YOUTUBE_CLIENT_ID: ${{ secrets.YOUTUBE_CLIENT_ID }}
+          YOUTUBE_CLIENT_SECRET: ${{ secrets.YOUTUBE_CLIENT_SECRET }}
+          YOUTUBE_REFRESH_TOKEN: ${{ secrets.YOUTUBE_REFRESH_TOKEN }}
+          YOUTUBE_CHANNEL_ID: ${{ secrets.YOUTUBE_CHANNEL_ID }}
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          RENDER_ONLY: ${{ inputs.render_only }}
         run: |
-          if [ -z "$TOPIC_INDEX" ]; then unset TOPIC_INDEX; fi
-          python -m src.main
-      - uses: actions/upload-artifact@v4
+          if [ "$RENDER_ONLY" = "true" ]; then
+            python -m src.main --render-only
+          else
+            python -m src.main
+          fi
+      - name: Retain video, thumbnail, subtitles and safe report
+        if: always()
+        uses: actions/upload-artifact@v4
         with:
-          name: nishat-tech-short
-          path: output/
-          retention-days: 3
+          name: nishat-tech-${{ github.run_id }}
+          path: |
+            output/short.mp4
+            output/thumbnail.jpg
+            output/metadata.json
+            output/subtitles.srt
+            output/subtitles.ass
+            output/timing.json
+            output/report.json
+          if-no-files-found: warn
+          retention-days: 7

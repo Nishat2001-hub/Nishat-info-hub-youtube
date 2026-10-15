@@ -1,18 +1,64 @@
-"""Run interactively on a trusted computer; NEVER run inside GitHub Actions."""
-import json
-from pathlib import Path
-from google_auth_oauthlib.flow import InstalledAppFlow
-SCOPES=["https://www.googleapis.com/auth/youtube.upload"]
+"""Trusted-computer loopback OAuth -> GitHub Secrets, no token files or output."""
+import argparse
+import os
+import subprocess
+
+REPO = "Nishat2001-hub/Nishat-info-hub-youtube"
+
+
+def set_secret(name, value):
+    if not value:
+        raise RuntimeError("Required credential was not returned")
+    result = subprocess.run(["gh", "secret", "set", name, "--repo", REPO],
+                            input=value, text=True, capture_output=True, timeout=60)
+    if result.returncode:
+        raise RuntimeError("GitHub rejected secret storage; check gh login and repository access")
+    print(f"Stored {name} in GitHub Secrets.")
+
+
 def main():
-    print("Use a Google OAuth Desktop client JSON downloaded to this computer.")
-    path=Path(input("Path to client_secret JSON: ").strip())
-    flow=InstalledAppFlow.from_client_secrets_file(str(path),SCOPES)
-    creds=flow.run_local_server(port=0,open_browser=True)
-    print("OAuth authorization complete.")
-    print("Add these values directly to GitHub Actions Secrets; never paste into chat:")
-    data=json.loads(path.read_text())
-    client=data.get("installed") or data.get("web")
-    print("YOUTUBE_CLIENT_ID:",client["client_id"])
-    print("YOUTUBE_CLIENT_SECRET:",client["client_secret"])
-    print("YOUTUBE_REFRESH_TOKEN:",creds.refresh_token or "NOT RETURNED: check OAuth consent configuration")
-if __name__=="__main__":main()
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--client-json", required=True, help="Downloaded Desktop OAuth client file")
+    args = parser.parse_args()
+    if os.getenv("GITHUB_ACTIONS") == "true":
+        raise RuntimeError("OAuth consent must run on your trusted computer")
+    result = subprocess.run(["gh", "auth", "status"], capture_output=True)
+    if result.returncode:
+        raise RuntimeError("Sign in using gh auth login before running OAuth setup")
+    from google_auth_oauthlib.flow import InstalledAppFlow
+    from googleapiclient.discovery import build
+    scopes = ["https://www.googleapis.com/auth/youtube.upload",
+              "https://www.googleapis.com/auth/youtube.readonly"]
+    flow = InstalledAppFlow.from_client_secrets_file(args.client_json, scopes, autogenerate_code_verifier=True)
+    if flow.client_type != "installed":
+        raise RuntimeError("Use a Desktop OAuth client with a loopback redirect")
+    creds = flow.run_local_server(
+        host="localhost", bind_addr="127.0.0.1", port=0, open_browser=True,
+        authorization_prompt_message="", success_message="Authorization complete. You may close this window.",
+        access_type="offline", prompt="consent", timeout_seconds=300)
+    if not creds.refresh_token:
+        raise RuntimeError("Google did not return an offline refresh token")
+    youtube = build("youtube", "v3", credentials=creds, cache_discovery=False)
+    channels = youtube.channels().list(part="id,snippet", mine=True).execute()
+    items = channels.get("items", [])
+    if len(items) != 1:
+        raise RuntimeError("Authorize exactly one YouTube channel before storing secrets")
+    print("Authorized channel:", items[0]["snippet"]["title"])
+    # No secrets are passed in CLI arguments, printed, or written to disk.
+    for name, value in (
+        ("YOUTUBE_CLIENT_ID", creds.client_id),
+        ("YOUTUBE_CLIENT_SECRET", creds.client_secret),
+        ("YOUTUBE_REFRESH_TOKEN", creds.refresh_token),
+        ("YOUTUBE_CHANNEL_ID", items[0]["id"]),
+    ):
+        set_secret(name, value)
+    print("Setup complete. Daily automation uploads privately after credentials are available.")
+
+
+if __name__ == "__main__":
+    try:
+        main()
+    except Exception as error:
+        # Avoid printing provider responses or a traceback with authorization details.
+        print(f"Setup stopped ({type(error).__name__}). Check Google consent and GitHub login.")
+        raise SystemExit(1)

@@ -1,0 +1,53 @@
+name: Verify Shorts Pipeline
+on:
+  push:
+    branches: [main, automation/private-shorts-factory]
+    paths-ignore: ['docs/**', 'README.md']
+  pull_request:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  test:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: pip
+      - run: |
+          sudo apt-get update
+          sudo apt-get install -y ffmpeg fonts-noto-core
+          python -m pip install -r requirements.txt
+      - run: python -m unittest discover -s tests -v
+      - name: Render and decode synthetic smoke video
+        run: python -m src.main --smoke
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: smoke-render
+          path: output/
+          retention-days: 3
+  live-voice:
+    if: github.event_name != 'pull_request'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - run: |
+          sudo apt-get update
+          sudo apt-get install -y ffmpeg fonts-noto-core espeak-ng
+          python -m pip install -r requirements.txt
+      - name: Real Bengali voice and complete rendering
+        run: python -m src.main --test-render
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: live-bengali-render
+          path: output/
+          retention-days: 3

@@ -4,3 +4,8 @@ credentials.json
 token.json
 *.pickle
 __pycache__/
+.factory/
+.venv/
+client_secret*.json
+*.log
+
