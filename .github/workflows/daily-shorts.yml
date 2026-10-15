@@ -12,7 +12,7 @@ on:
       render_only:
         description: Generate an artifact without uploading
         type: boolean
-        default: false
+        default: true
   schedule:
     - cron: '0 13 * * *'
 concurrency:
@@ -35,21 +35,11 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y ffmpeg fonts-noto-core espeak-ng
           python -m pip install -r requirements.txt
-      - name: Generate and upload privately
+      - name: Generate review artifact only (never uploads)
         env:
           GH_STATE_TOKEN: ${{ github.token }}
-          YOUTUBE_CLIENT_ID: ${{ secrets.YOUTUBE_CLIENT_ID }}
-          YOUTUBE_CLIENT_SECRET: ${{ secrets.YOUTUBE_CLIENT_SECRET }}
-          YOUTUBE_REFRESH_TOKEN: ${{ secrets.YOUTUBE_REFRESH_TOKEN }}
-          YOUTUBE_CHANNEL_ID: ${{ secrets.YOUTUBE_CHANNEL_ID }}
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
-          RENDER_ONLY: ${{ inputs.render_only }}
-        run: |
-          if [ "$RENDER_ONLY" = "true" ]; then
-            python -m src.main --render-only
-          else
-            python -m src.main
-          fi
+        run: python -m src.main --render-only
       - name: Retain video, thumbnail, subtitles and safe report
         if: always()
         uses: actions/upload-artifact@v4

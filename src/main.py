@@ -8,7 +8,7 @@ from .common import OUT, report
 from .content import Exhausted, select
 from .state import History
 from .render import render
-from . import youtube_upload
+from .approval import bundle_digest
 
 
 def main(argv=None):
@@ -37,36 +37,17 @@ def main(argv=None):
         key = topic["key"]
         stage = "render"
         metadata = render(topic, smoke=args.smoke)
-        if args.render_only or test or not youtube_upload.configured():
-            if history:
-                history.mark(key, "rendered", day=day, title=topic["title"],
-                             script=topic["script"], provider=topic["provider"])
-            status = "test_rendered" if test else (
-                "rendered" if args.render_only else "awaiting_oauth")
-            report(status, stage, duration_seconds=round(metadata["duration_seconds"], 2),
-                   voice_providers=metadata["voice_providers"],
-                   script_provider=metadata["script_provider"],
-                   warning=warning or "", upload_verified=False)
-            return 0
-        stage = "oauth_preflight"
-        service = youtube_upload.client()
-        stage = "upload_checkpoint"
-        history.mark(key, "uploading", day=day, title=topic["title"],
-                     script=topic["script"], provider=topic["provider"])
-        stage = "private_upload"
-        video_id = youtube_upload.upload_private(service, metadata)
-        # Save the confirmed video ID BEFORE thumbnail/post-upload work.
-        stage = "save_upload"
-        history.mark(key, "uploaded", video_id=video_id, privacy="private")
-        stage = "verify_upload"
-        upload_status = youtube_upload.verify(service, video_id)
-        thumbnail_status = youtube_upload.thumbnail(service, video_id)
-        history.mark(key, "uploaded", verified_at=datetime.now(ZoneInfo("UTC")).isoformat(),
-                     youtube_upload_status=upload_status, thumbnail=thumbnail_status)
-        report("uploaded_private", stage, video_id=video_id, privacy="private",
-               youtube_upload_status=upload_status, upload_verified=True,
-               thumbnail=thumbnail_status, warning=warning or "",
-               voice_providers=metadata["voice_providers"])
+        # Generation never uploads, even when credentials are present.
+        digest = bundle_digest()
+        if history:
+            history.mark(key, "rendered", day=day, title=topic["title"],
+                         script=topic["script"], provider=topic["provider"])
+        status = "test_rendered" if test else (
+            "awaiting_approval")
+        report(status, stage, duration_seconds=round(metadata["duration_seconds"], 2),
+               voice_providers=metadata["voice_providers"],
+               script_provider=metadata["script_provider"],
+               warning=warning or "", upload_verified=False, approval_sha256=digest)
         return 0
     except Exhausted:
         report("blocked", stage, reason="Curated catalog exhausted; duplicates are blocked.",

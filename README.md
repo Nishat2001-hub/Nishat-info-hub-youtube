@@ -5,17 +5,16 @@ Daily GitHub Actions automation for Bengali technology Shorts. Generates a
 animated backgrounds, Bengali subtitles, fades, title, description and thumbnail.
 YouTube uploads are **always Private**. Public/unlisted publishing is absent.
 
-At 13:00 UTC (19:00 Bangladesh), the factory chooses an unused script, renders
-and validates the video, persists an upload checkpoint, uploads through a
-resumable session, verifies privacy through YouTube, and saves the video ID.
-GitHub may delay or skip cron; this is not a guaranteed exact-time scheduler.
-Changes to factory code on main also trigger a run so deployments are exercised.
-The same daily limit applies to scheduled, manual and deployment runs.
+At 13:00 UTC (19:00 Bangladesh), the factory generates a review artifact only.
+Push, scheduled and normal manual runs NEVER upload, even after OAuth setup.
+A separate manual workflow accepts the reviewed run ID and its approval_sha256.
+It checks the exact MP4 and metadata bytes and permits one private upload only.
+Public/unlisted publishing is absent. No external account settings are changed.
 
 ## One-time authorization
 
-See [secure Google OAuth setup](docs/OAUTH.md). Until all four YouTube secrets
-exist, daily runs generate artifacts and explicitly report "awaiting_oauth".
+See [secure Google OAuth setup](docs/OAUTH.md). Every daily generation reports "awaiting_approval". All four YouTube secrets
+are required only for the separate approved private upload.
 Credentials live in GitHub Secrets and are injected into the execution step.
 
 | Secret | Purpose |
@@ -50,8 +49,8 @@ used. No silence-only substitute is used in production.
 
 ## Operations
 
-Actions → **Bengali Shorts Factory** → Run workflow. Set render_only for a render
-without an upload. Daily runs upload automatically after OAuth setup.
+Actions → **Bengali Shorts Factory** → Run workflow. All runs render without an upload. Download and review the artifact, then follow
+[the exact approval steps](docs/APPROVAL.md) if you want one private upload.
 Artifacts contain MP4, JPEG thumbnail, ASS/SRT subtitles, metadata and safe reports.
 Failed runs remain failed and produce reports when application execution was
 reached. GitHub's normal workflow failure notifications can be used.

@@ -52,7 +52,7 @@ def main():
         ("YOUTUBE_CHANNEL_ID", items[0]["id"]),
     ):
         set_secret(name, value)
-    print("Setup complete. Daily automation uploads privately after credentials are available.")
+    print("Setup complete. Generation never uploads; each private upload requires artifact approval.")
 
 
 if __name__ == "__main__":

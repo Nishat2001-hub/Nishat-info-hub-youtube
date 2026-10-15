@@ -27,8 +27,9 @@ accepted API response does not guarantee successful processing.
 The daily job needs contents write permission for its dedicated state branch.
 Repository or organization rules may prohibit it; a failed checkpoint blocks
 upload. Do not store tokens/session URLs in history. Use repository Secrets;
-no environment approval gate is added, so daily runs require no consent click.
-Credentials are exposed only to the factory execution step.
+daily generation has no YouTube credentials. A separate workflow requires an
+explicit run ID and reviewed video/metadata digest for each private upload.
+YouTube credentials are exposed only to the approved upload step.
 
 Refresh tokens may expire/revoke after security changes or Google policy changes.
 Repeat the personal OAuth helper if needed. Channel binding prevents uploading
@@ -59,5 +60,5 @@ There is no code option for public/unlisted uploads.
 
 Cron is 13:00 UTC daily (19:00 Bangladesh). GitHub can delay or skip schedules,
 and can disable schedules after inactivity on a public repository. At most one
-completed production run is recorded per Bangladesh day. CI/testing never
+completed generation is recorded per Bangladesh day. Scheduled runs never upload. CI/testing never
 touches production history or uploads videos.

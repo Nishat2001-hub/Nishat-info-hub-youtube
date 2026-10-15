@@ -138,20 +138,6 @@ class UploadTests(unittest.TestCase):
 
 
 class PipelineTests(unittest.TestCase):
-    def test_checkpoint_failure_prevents_network_upload(self):
-        history = History()
-        with patch('src.main.History', return_value=history), \
-             patch.object(history, 'load', return_value=history), \
-             patch.object(history, 'mark', side_effect=StateError()), \
-             patch('src.main.render', return_value={}), \
-             patch('src.main.youtube_upload.configured', return_value=True), \
-             patch('src.main.youtube_upload.client', return_value=object()), \
-             patch('src.main.youtube_upload.upload_private') as insert, \
-             patch('src.main.report') as report:
-            self.assertEqual(factory.main([]), 1)
-            insert.assert_not_called()
-            self.assertEqual(report.call_args.kwargs['error_type'], 'StateError')
-
     def test_ambiguous_history_blocks_even_render(self):
         history = History()
         history.data['entries']['key'] = {'status': 'uploading'}

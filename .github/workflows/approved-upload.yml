@@ -1,0 +1,57 @@
+name: Upload Approved Video Privately
+on:
+  workflow_dispatch:
+    inputs:
+      source_run_id:
+        description: Successful Bengali Shorts Factory run ID reviewed by the owner
+        required: true
+        type: string
+      approved_sha256:
+        description: Copy approval_sha256 from the reviewed run report
+        required: true
+        type: string
+permissions:
+  contents: write
+  actions: read
+concurrency:
+  group: nishat-tech-factory
+  cancel-in-progress: false
+jobs:
+  upload:
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Validate source is a successful production render on main
+        env:
+          GH_TOKEN: ${{ github.token }}
+          SOURCE_RUN: ${{ inputs.source_run_id }}
+        run: |
+          [[ "$SOURCE_RUN" =~ ^[0-9]+$ ]] || exit 1
+          gh api "repos/$GITHUB_REPOSITORY/actions/runs/$SOURCE_RUN" > /tmp/source-run.json
+          python - <<'PYTHON'
+          import json
+          r = json.load(open('/tmp/source-run.json'))
+          assert r['path'] == '.github/workflows/daily-shorts.yml'
+          assert r['head_branch'] == 'main' and r['conclusion'] == 'success'
+          PYTHON
+      - uses: actions/download-artifact@v4
+        with:
+          name: nishat-tech-${{ inputs.source_run_id }}
+          run-id: ${{ inputs.source_run_id }}
+          github-token: ${{ github.token }}
+          path: output
+      - run: python -m pip install -r requirements.txt
+      - name: Upload only the exact approved video and metadata, privately
+        env:
+          GH_STATE_TOKEN: ${{ github.token }}
+          YOUTUBE_CLIENT_ID: ${{ secrets.YOUTUBE_CLIENT_ID }}
+          YOUTUBE_CLIENT_SECRET: ${{ secrets.YOUTUBE_CLIENT_SECRET }}
+          YOUTUBE_REFRESH_TOKEN: ${{ secrets.YOUTUBE_REFRESH_TOKEN }}
+          YOUTUBE_CHANNEL_ID: ${{ secrets.YOUTUBE_CHANNEL_ID }}
+          APPROVED_SHA: ${{ inputs.approved_sha256 }}
+        run: python -m src.approval --approved-sha256 "$APPROVED_SHA"
