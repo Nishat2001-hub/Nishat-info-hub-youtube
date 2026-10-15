@@ -38,15 +38,20 @@ class History:
             raise StateError("GitHub history credentials are unavailable")
         body = json.dumps(payload).encode() if payload is not None else None
         request = urllib.request.Request(
-            f"https://api.github.com/repos/{self.repo}/{endpoint}",
+            f"https://api.github.com/repos/{self.repo}" + (f"/{endpoint}" if endpoint else ""),
             data=body, method=method,
             headers={"Authorization": f"Bearer {self.token}",
                      "Accept": "application/vnd.github+json",
                      "X-GitHub-Api-Version": "2022-11-28",
                      "Content-Type": "application/json"})
         def call():
-            with urllib.request.urlopen(request, timeout=40) as response:
-                return json.load(response)
+            try:
+                with urllib.request.urlopen(request, timeout=40) as response:
+                    return json.load(response)
+            except urllib.error.HTTPError as error:
+                # Endpoint identifiers and HTTP status are safe; response bodies/headers are not logged.
+                print(f"GitHub history API: {method} {endpoint or 'repository'} -> HTTP {error.code}")
+                raise
         return retry(call, retryable=lambda e: isinstance(e, (TimeoutError, OSError))
                      and (not isinstance(e, urllib.error.HTTPError) or e.code >= 500))
 

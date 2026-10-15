@@ -76,6 +76,7 @@ def main(argv=None):
         # Do not dump a stack trace or HTTP response that could reveal OAuth/session data.
         # A persisted 'uploading' entry remains unresolved on any uncertain outcome.
         report("failed", stage, error_type=type(error).__name__,
+               http_status=getattr(error, "code", None),
                reason="Operation failed. See stage; no credentials are included in this report.",
                upload_verified=False)
         return 1

@@ -38,6 +38,14 @@ class CatalogTests(unittest.TestCase):
 
 
 class HistoryTests(unittest.TestCase):
+    def test_repository_api_endpoint_has_no_trailing_slash(self):
+        import io
+        history = History()
+        history.repo, history.token = 'owner/repo', 'test-only'
+        with patch('urllib.request.urlopen', return_value=io.BytesIO(b'{"default_branch":"main"}')) as request:
+            self.assertEqual(history.api('GET', '')['default_branch'], 'main')
+            self.assertEqual(request.call_args.args[0].full_url, 'https://api.github.com/repos/owner/repo')
+
     def test_corrupt_local_history_is_not_ignored(self):
         with tempfile.TemporaryDirectory() as directory, patch.dict(os.environ, {'GITHUB_ACTIONS': ''}):
             path = Path(directory) / 'history.json'
