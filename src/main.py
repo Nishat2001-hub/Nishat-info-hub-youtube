@@ -36,7 +36,7 @@ def main(argv=None):
         topic, warning = select(entries, day)
         key = topic["key"]
         stage = "render"
-        metadata = render(topic, smoke=args.smoke)
+        metadata = render(topic, smoke=args.smoke, test_render=args.test_render)
         # Generation never uploads, even when credentials are present.
         digest = bundle_digest()
         if history:
@@ -65,3 +65,4 @@ def main(argv=None):
 
 if __name__ == "__main__":
     raise SystemExit(main())
+

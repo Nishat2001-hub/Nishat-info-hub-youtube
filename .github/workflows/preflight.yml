@@ -1,0 +1,31 @@
+name: Check YouTube Connection Without Upload
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths: ['src/preflight.py', '.github/workflows/preflight.yml']
+permissions:
+  contents: read
+jobs:
+  check:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - run: python -m pip install -r requirements.txt
+      - name: Verify credentials and channel without sending video bytes
+        env:
+          YOUTUBE_CLIENT_ID: ${{ secrets.YOUTUBE_CLIENT_ID }}
+          YOUTUBE_CLIENT_SECRET: ${{ secrets.YOUTUBE_CLIENT_SECRET }}
+          YOUTUBE_REFRESH_TOKEN: ${{ secrets.YOUTUBE_REFRESH_TOKEN }}
+          YOUTUBE_CHANNEL_ID: ${{ secrets.YOUTUBE_CHANNEL_ID }}
+        run: python -m src.preflight
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: youtube-connection-report
+          path: output/report.json
+          retention-days: 7

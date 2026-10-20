@@ -29,7 +29,7 @@ def main(argv=None):
         if not hmac.compare_digest(bundle_digest(), args.approved_sha256):
             raise ValueError("Approved bytes do not match")
         metadata = json.loads((OUT / "metadata.json").read_text(encoding="utf-8"))
-        if metadata.get("smoke_test") or metadata.get("privacyStatus") != "private":
+        if metadata.get("smoke_test") or metadata.get("test_render") or metadata.get("privacyStatus") != "private":
             raise ValueError("Only real private videos are eligible")
         key = metadata["content_key"]
         stage = "history"
@@ -60,3 +60,4 @@ def main(argv=None):
 
 if __name__ == "__main__":
     raise SystemExit(main())
+

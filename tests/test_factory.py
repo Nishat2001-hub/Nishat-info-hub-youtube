@@ -131,7 +131,7 @@ class UploadTests(unittest.TestCase):
 
     def test_synthetic_or_public_upload_rejected_before_insert(self):
         youtube = FakeYouTube()
-        for extra in ({'smoke_test': True}, {'privacyStatus': 'public'}, {'privacyStatus': 'unlisted'}):
+        for extra in ({'smoke_test': True}, {'test_render': True}, {'privacyStatus': 'public'}, {'privacyStatus': 'unlisted'}):
             with self.assertRaises(RuntimeError):
                 upload.upload_private(youtube, {**self.metadata, **extra})
         self.assertEqual(youtube.inserts, 0)
@@ -161,3 +161,4 @@ class PipelineTests(unittest.TestCase):
 
 if __name__ == '__main__':
     unittest.main()
+

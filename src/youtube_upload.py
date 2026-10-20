@@ -36,8 +36,8 @@ def client():
 
 
 def upload_private(service, metadata, video_path=None, media_factory=None):
-    if metadata.get("smoke_test"):
-        raise RuntimeError("Synthetic smoke-test videos must never be uploaded")
+    if metadata.get("smoke_test") or metadata.get("test_render"):
+        raise RuntimeError("Test videos must never be uploaded")
     if metadata.get("privacyStatus", "private") != "private":
         raise RuntimeError("Only private uploads are permitted")
     if media_factory is None:
@@ -88,3 +88,4 @@ def verify(service, video_id):
     if not items or items[0]["status"]["privacyStatus"] != "private":
         raise RuntimeError("YouTube did not confirm private status")
     return items[0]["status"].get("uploadStatus", "unknown")
+

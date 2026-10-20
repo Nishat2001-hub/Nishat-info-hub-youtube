@@ -181,7 +181,7 @@ def artwork(topic):
     thumb.convert("RGB").save(OUT / "thumbnail.jpg", quality=92, optimize=True)
 
 
-def render(topic, smoke=False):
+def render(topic, smoke=False, test_render=False):
     OUT.mkdir(exist_ok=True)
     sentences = topic["sentences"][:2] if smoke else topic["sentences"]
     voice, timeline, providers = audio(sentences, smoke=smoke)
@@ -226,7 +226,8 @@ def render(topic, smoke=False):
             "tags": ["Nishat Tech", "Bangla Tech", "Bengali", "Shorts"],
             "privacyStatus": "private", "content_key": topic["key"],
             "script_provider": topic["provider"], "voice_providers": providers,
-            "duration_seconds": seconds, "smoke_test": smoke}
+            "duration_seconds": seconds, "smoke_test": smoke, "test_render": test_render}
     write_json(OUT / "metadata.json", meta)
     write_json(OUT / "timing.json", timeline)
     return meta
+
