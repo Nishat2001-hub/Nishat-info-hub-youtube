@@ -62,3 +62,50 @@ Cron is 13:00 UTC daily (19:00 Bangladesh). GitHub can delay or skip schedules,
 and can disable schedules after inactivity on a public repository. At most one
 completed generation is recorded per Bangladesh day. Scheduled runs never upload. CI/testing never
 touches production history or uploads videos.
+
+## Verified handoff — 20 October 2026
+
+Implementation commit: fd6c9747e2462e39ecf86463fcb381c485f033aa.
+
+- Cloud verification run 39392808336 passed all 21 unit tests, rendered and
+  fully decoded a 3.36-second synthetic smoke video and a 16.97-second real
+  Bengali-voice video (bn-BD-NabanitaNeural). Both tests have upload guards;
+  real-voice CI metadata now also carries test_render=true.
+- Production generation already exists and is scheduled for 19:00 Bangladesh
+  time. Run 39392808267 correctly skipped a second generation for the same
+  Bangladesh day; its artifact contains a skip report, not a new video.
+  Production run 39307126719 contains a 17.93-second review video.
+- Read-only connection check 39392808376 returned needs_setup. All four
+  YOUTUBE_CLIENT_ID, YOUTUBE_CLIENT_SECRET, YOUTUBE_REFRESH_TOKEN and
+  YOUTUBE_CHANNEL_ID values were unavailable to the job. A successful preflight
+  job means the diagnostic completed; only report status channel_verified
+  confirms connection. No upload was attempted.
+- Latest inspected production logs had no GEMINI_API_KEY and used curated
+  scripts. Gemini integration is implemented and fallback tested, but live
+  Gemini generation is not verified. Do not claim AI generation is active.
+- No billing configuration, Google settings, repository settings or YouTube
+  privacy/publication settings were changed.
+
+### Remaining owner actions and approvals
+
+1. Authorize the Google Cloud project/API/OAuth setup described in OAUTH.md,
+   then perform the personal Google login and consent on a trusted computer.
+   Run scripts/oauth_setup.py there; it securely stores the four required
+   GitHub Actions secrets. Do not send credentials in chat. These are setup
+   actions, not completed merely by granting chat approval.
+2. If live AI script generation is wanted, create a suitable Gemini free-tier
+   key and store GEMINI_API_KEY securely, as described in OAUTH.md. Curated
+   generation needs no AI key; its finite catalog eventually exhausts.
+3. Run "Check YouTube Connection Without Upload" from Actions. Require
+   channel_verified=true before approving an upload. This workflow only
+   refreshes OAuth credentials and lists the authenticated channel; it has
+   no video-insert call and never touches production history.
+4. Review a successful production run's MP4 and metadata, then approve that
+   exact source_run_id and report approval_sha256 in the separate
+   "Upload Approved Video Privately" workflow. CI test artifacts are ineligible.
+   Artifacts expire, so use a retained production artifact.
+5. Public publication requires a separate explicit approval and an action in
+   YouTube Studio. This project's code has no public/unlisted publishing path.
+
+The pipeline uses free-service fallbacks and does not provision paid resources.
+Free availability, quotas and future provider changes are not guaranteed.
